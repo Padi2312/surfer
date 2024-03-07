@@ -71,10 +71,8 @@ impl Server {
             self.address, self.port
         ));
         self.static_dirs.iter().for_each(|(route, dir)| {
-            self.logger.info(&format!(
-                "Hosting files from '{}' at {}",
-                dir, route
-            ));
+            self.logger
+                .info(&format!("Hosting files from '{}' at {}", dir, route));
         });
         self.routes.iter().for_each(|(route, _)| {
             self.logger.info(&format!("Registered route: {}", route));
@@ -122,6 +120,14 @@ impl Server {
 
         let route_index = format!("{} {}", request.method.as_str(), request.path.as_str());
 
+        // If not found in static_dirs, try to match in routes
+        if let Some(route) = self.routes.get(&route_index) {
+            route(request).await.send(&mut stream).await;
+            return;
+        }
+
+
+        // If no route is found, return 404 Not Found
         if let Some((request_url_path, dir_path)) = self
             .static_dirs
             .iter()
@@ -136,13 +142,6 @@ impl Server {
             return;
         }
 
-        // If not found in static_dirs, try to match in routes
-        if let Some(route) = self.routes.get(&route_index) {
-            route(request).await.send(&mut stream).await;
-            return;
-        }
-
-        // If no route is found, return 404 Not Found
         self.send_response(
             &mut stream,
             "HTTP/1.1 404 NOT FOUND",
