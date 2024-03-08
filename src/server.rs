@@ -48,6 +48,18 @@ macro_rules! route {
         )
     };
 }
+
+#[macro_export]
+macro_rules! headers {
+    ($(($key:expr, $value:expr)),*) => {{
+        let mut headers = HashMap::new();
+        $(
+            headers.insert($key.to_string(), $value.to_string());
+        )*
+        headers
+    }};
+}
+
 impl Server {
     pub fn new(address: String, port: String) -> Server {
         Server {

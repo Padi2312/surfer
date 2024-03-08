@@ -46,12 +46,19 @@ impl Method {
 }
 
 #[derive(Debug)]
+pub struct FormData {
+    pub name: String,
+    pub filename: Option<String>,
+    pub data: Vec<u8>,
+}
+
+#[derive(Debug)]
 pub struct Request {
     pub method: String,
     pub path: String,
     pub headers: HashMap<String, String>,
     pub body: Vec<u8>,
-    pub files: HashMap<String, Vec<u8>>,
+    pub form_data: Vec<FormData>,
     pub http_version: String,
 }
 
@@ -62,7 +69,7 @@ impl Request {
             path: String::new(),
             headers: HashMap::new(),
             body: Vec::new(),
-            files: HashMap::new(),
+            form_data: Vec::new(),
             http_version: String::new(),
         }
     }
@@ -123,7 +130,7 @@ impl Request {
                     .unwrap()
                     .split("boundary=")
                     .collect::<Vec<&str>>()[1];
-                self.files = self.parse_multipart_form_data(&self.body, &boundary);
+                self.form_data = self.parse_multipart_form_data(&self.body, &boundary);
             }
             _ => {
                 let body_buffer = &buffer[header_length..bytes_read];
@@ -152,68 +159,68 @@ impl Request {
             }
         }
     }
+    fn parse_multipart_form_data(&self, body: &[u8], boundary: &str) -> Vec<FormData> {
+        let mut form_data: Vec<FormData> = Vec::new();
+        let boundary = format!("--{}", boundary).into_bytes();
+        let mut start_index = 0;
 
-    fn parse_multipart_form_data(&self, body: &[u8], boundary: &str) -> HashMap<String, Vec<u8>> {
-        let mut files: HashMap<String, Vec<u8>> = HashMap::new();
-        let boundary = format!("--{}", boundary);
-        let body_str = String::from_utf8_lossy(body);
-
-        for part in body_str.split(&boundary) {
-            if part.is_empty() || part == "--" {
-                continue;
-            }
-
-            if let Some((headers_str, content)) = part.split_once("\r\n\r\n") {
-                let mut part_headers = HashMap::new();
-                let mut name = String::new();
-                let mut filename: Option<String> = None;
-
-                for header_line in headers_str.split("\r\n") {
-                    if let Some((header_name, header_value)) = header_line.split_once(": ") {
-                        match header_name {
-                            "Content-Disposition" => {
-                                part_headers
-                                    .insert(header_name.to_string(), header_value.to_string());
-
-                                // Extract 'name' and potentially 'filename' from Content-Disposition
-                                let disposition_parts = header_value
-                                    .split(';')
-                                    .map(|s| s.trim())
-                                    .collect::<Vec<_>>();
-                                for part in disposition_parts {
-                                    if part.starts_with("name=") {
-                                        name = part
-                                            .trim_start_matches("name=")
-                                            .trim_matches('"')
-                                            .to_string();
-                                    } else if part.starts_with("filename=") {
-                                        filename = Some(
-                                            part.trim_start_matches("filename=")
-                                                .trim_matches('"')
-                                                .to_string(),
-                                        );
-                                    }
-                                }
-                            }
-                            _ => {
-                                // Handle additional headers here
-                                part_headers
-                                    .insert(header_name.to_string(), header_value.to_string());
-                            }
-                        }
-                    }
+        // We need to iterate manually over the bytes until we find the boundary
+        while let Some(boundary_index) = self.find_boundary(&body[start_index..], &boundary) {
+            let part_start = start_index + boundary_index + boundary.len();
+            if let Some(next_boundary_index) = self.find_boundary(&body[part_start..], &boundary) {
+                let part = &body[part_start..part_start + next_boundary_index];
+                if let Some(data) = self.process_part(part) {
+                    form_data.push(data);
                 }
-                // Process content based on headers (for example, based on Content-Type)
-                let trimmed_content = content.trim();
-                let content_bytes = trimmed_content.as_bytes().to_vec();
-                // Inserting content into the files HashMap. If filename is present, use it as key, else use name.
-                let key = filename.unwrap_or_else(|| name.clone());
-                if !key.is_empty() {
-                    files.insert(key, content_bytes);
+                start_index = part_start + next_boundary_index;
+            } else {
+                break;
+            }
+        }
+        form_data
+    }
+
+    fn find_boundary(&self, data: &[u8], boundary: &[u8]) -> Option<usize> {
+        data.windows(boundary.len())
+            .position(|window| window == boundary)
+    }
+
+    fn process_part(&self, part: &[u8]) -> Option<FormData> {
+        let split_index = part.windows(4).position(|window| window == b"\r\n\r\n")?;
+        // Split the part into headers and content (because content should be handled differently depending on the headers)
+        let (header_part, content_part) = part.split_at(split_index);
+        let headers_str = String::from_utf8_lossy(&header_part);
+        let (name, filename) = self.parse_multipart_form_data_headers(&headers_str);
+
+        Some(FormData {
+            name,
+            filename,
+            data: content_part[4..].to_vec(), // Skip the "\r\n\r\n"
+        })
+    }
+
+    fn parse_multipart_form_data_headers(&self, headers: &str) -> (String, Option<String>) {
+        let mut name = String::new();
+        let mut filename = None;
+        for line in headers.lines() {
+            if line.starts_with("Content-Disposition:") {
+                for attr in line.split(';').skip(1) {
+                    let attr = attr.trim();
+                    if attr.starts_with("name=") {
+                        name = attr
+                            .trim_start_matches("name=\"")
+                            .trim_end_matches("\"")
+                            .to_string();
+                    } else if attr.starts_with("filename=") {
+                        filename = Some(
+                            attr.trim_start_matches("filename=\"")
+                                .trim_end_matches("\"")
+                                .to_string(),
+                        );
+                    }
                 }
             }
         }
-
-        files
+        (name, filename)
     }
 }
