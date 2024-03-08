@@ -11,8 +11,8 @@ pub struct Response {
 impl Response {
     pub fn new(status_code: u16, headers: HashMap<String, String>, body: Vec<u8>) -> Response {
         Response {
-            status_code: status_code,
-            headers: headers,
+            status_code,
+            headers,
             body: Some(body),
         }
     }

@@ -27,6 +27,19 @@ type AsyncHandler = Box<
 // Route macro for registering routes in server
 #[macro_export]
 macro_rules! route {
+    // Pattern for routes with additional arguments
+    ($method:ident, $path:expr, $handler:expr, $arg:expr) => {{
+        let cloned_arg = $arg.clone(); // Clone outside the closure
+        (
+            $method,
+            $path,
+            Box::new(move |request: Request| {
+                let arg_for_async = cloned_arg.clone(); // Clone for the async block
+                Box::pin(async move { $handler(request, arg_for_async).await })
+            }),
+        )
+    }};
+    // Pattern for routes without additional arguments
     ($method:ident, $path:expr, $handler:expr) => {
         (
             $method,
@@ -35,7 +48,6 @@ macro_rules! route {
         )
     };
 }
-
 impl Server {
     pub fn new(address: String, port: String) -> Server {
         Server {
@@ -125,7 +137,6 @@ impl Server {
             route(request).await.send(&mut stream).await;
             return;
         }
-
 
         // If no route is found, return 404 Not Found
         if let Some((request_url_path, dir_path)) = self
