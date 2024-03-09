@@ -26,6 +26,12 @@ impl Response {
         for (key, value) in &self.headers {
             response.push_str(&format!("{}: {}\r\n", key, value));
         }
+        
+        // Add the Content-Length header
+        if self.body.is_some() {
+            response.push_str(&format!("Content-Length: {}\r\n", self.body.as_ref().unwrap().len()));
+        } 
+
         response.push_str("\r\n");
 
         let mut response = response.as_bytes().to_vec();

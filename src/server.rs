@@ -29,6 +29,7 @@ type AsyncHandler = Box<
 macro_rules! route {
     // Pattern for routes with additional arguments
     ($method:ident, $path:expr, $handler:expr, $arg:expr) => {{
+        use std::collections::HashMap;
         let cloned_arg = $arg.clone(); // Clone outside the closure
         (
             $method,
@@ -52,6 +53,7 @@ macro_rules! route {
 #[macro_export]
 macro_rules! headers {
     ($(($key:expr, $value:expr)),*) => {{
+        use std::collections::HashMap;
         let mut headers = HashMap::new();
         $(
             headers.insert($key.to_string(), $value.to_string());
@@ -61,17 +63,18 @@ macro_rules! headers {
 }
 
 impl Server {
-    pub fn new(address: String, port: String) -> Server {
+
+    pub fn new(address: Option<String>, port: Option<String>) -> Server {
         Server {
-            address,
-            port,
+            address: address.unwrap_or("0.0.0.0".to_owned()),
+            port: port.unwrap_or("8080".to_owned()),
             logger: Logger::new(),
             routes: HashMap::new(),
             static_dirs: HashMap::new(),
         }
     }
 
-    pub async fn register_static_dir(&mut self, url_path: &str, dir_path: Option<&str>) {
+    pub fn register_static_dir(&mut self, url_path: &str, dir_path: Option<&str>) {
         let dir_path = PathBuf::from(dir_path.unwrap_or(url_path));
         // Since we're in an async block, we need to lock asynchronously to modify shared state
         self.static_dirs.insert(
