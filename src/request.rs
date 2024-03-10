@@ -2,6 +2,7 @@ use async_std::net::TcpStream;
 use async_std::prelude::*;
 use std::collections::HashMap;
 
+#[derive(Debug,Clone)]
 pub enum Method {
     GET,
     POST,

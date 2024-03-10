@@ -7,6 +7,7 @@ use surfer::response::json_response::JsonResponse;
 use surfer::response::{IntoResponse, Response};
 use surfer::route;
 use surfer::server::Server;
+use surfer_macros::surfer_launch;
 
 async fn index(_: Request) -> Response {
     let json_obj = json!({
@@ -22,7 +23,7 @@ async fn index(_: Request) -> Response {
 }
 
 #[cfg(not(release))]
-#[async_std::main]
+#[surfer_launch]
 async fn main() {
     println!("Testing the 'surfer' library...");
     let mut server = Server::new(None, None);
