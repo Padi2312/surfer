@@ -1,3 +1,7 @@
+pub mod file_response;
+pub mod html_response;
+pub mod json_response;
+
 use async_std::{net::TcpStream, prelude::*};
 use std::collections::HashMap;
 
@@ -8,30 +12,16 @@ pub struct Response {
     pub body: Option<Vec<u8>>,
 }
 
-impl Response {
-    pub fn new(status_code: u16, headers: HashMap<String, String>, body: Vec<u8>) -> Response {
-        Response {
-            status_code,
-            headers,
-            body: Some(body),
-        }
-    }
+pub trait IntoResponse {
+    fn into_response(self) -> impl std::future::Future<Output = Response> + Send;
+}
 
-    /*
-     * Send the response to the client
-     * The Content-Length header is automatically added
-     */
+impl Response {
     pub async fn send(&mut self, stream: &mut TcpStream) {
         let mut response = format!("HTTP/1.1 {}\r\n", self.status_code);
         for (key, value) in &self.headers {
             response.push_str(&format!("{}: {}\r\n", key, value));
         }
-        
-        // Add the Content-Length header
-        if self.body.is_some() {
-            response.push_str(&format!("Content-Length: {}\r\n", self.body.as_ref().unwrap().len()));
-        } 
-
         response.push_str("\r\n");
 
         let mut response = response.as_bytes().to_vec();

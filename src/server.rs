@@ -1,4 +1,3 @@
-use async_std::fs;
 use async_std::net::TcpListener;
 use async_std::net::TcpStream;
 use async_std::path::PathBuf;
@@ -10,8 +9,10 @@ use std::pin::Pin;
 use crate::logs::Logger;
 use crate::request::Method;
 use crate::request::Request;
+
+use crate::response::file_response::FileResponse;
+use crate::response::IntoResponse;
 use crate::response::Response;
-use crate::utils::get_content_type;
 
 pub struct Server {
     pub address: String,
@@ -63,7 +64,6 @@ macro_rules! headers {
 }
 
 impl Server {
-
     pub fn new(address: Option<String>, port: Option<String>) -> Server {
         Server {
             address: address.unwrap_or("0.0.0.0".to_owned()),
@@ -125,12 +125,12 @@ impl Server {
         let mut request = Request::new();
         if request.parse(&mut stream).await.is_err() {
             logger.error("Error parsing request");
-            self.send_response(
-                &mut stream,
-                "HTTP/1.1 400 Bad request",
-                b"404 Not Found".to_vec(),
-                "text/plain",
-            )
+            Response {
+                status_code: 400,
+                headers: headers!(("Content-Type", "text/plain")),
+                body: Some(b"400 Bad Request".to_vec()),
+            }
+            .send(&mut stream)
             .await;
             return;
         }
@@ -167,13 +167,12 @@ impl Server {
                 .await;
             return;
         }
-
-        self.send_response(
-            &mut stream,
-            "HTTP/1.1 404 NOT FOUND",
-            b"404 Not Found".to_vec(),
-            "text/plain",
-        )
+        Response {
+            status_code: 400,
+            headers: headers!(("Content-Type", "text/plain")),
+            body: Some(b"404 Not Found".to_vec()),
+        }
+        .send(&mut stream)
         .await;
     }
 
@@ -190,45 +189,13 @@ impl Server {
         } else {
             file_path.push(relative_path.trim_start_matches('/'));
         }
-        let content_type = get_content_type(&file_path);
-        let content = if file_path.exists().await && file_path.is_file().await {
-            fs::read(&file_path).await.unwrap_or_else(|_| Vec::new())
-        } else {
-            b"404 Not Found".to_vec()
-        };
 
-        let mut headers: HashMap<String, String> = HashMap::new();
-        headers.insert("Content-Type".to_string(), content_type.to_string());
-        headers.insert("Server".to_string(), "Statiker".to_string());
-        Response::new(200, headers, content)
-    }
-
-    async fn send_response(
-        &self,
-        stream: &mut TcpStream,
-        status_line: &str,
-        content: Vec<u8>,
-        content_type: &str,
-    ) {
-        let response = format!(
-            "{}\r\nContent-Length: {}\r\nContent-Type: {}\r\n\r\n",
-            status_line,
-            &content.len(),
-            content_type
-        );
-        let response = [response.as_bytes(), &content].concat();
-        self.write_response(stream, response).await;
-    }
-
-    async fn write_response(&self, stream: &mut TcpStream, response: Vec<u8>) {
-        if stream.write_all(&response).await.is_err() {
-            self.logger.error("Error writing response");
-            return;
+        FileResponse {
+            status_code: 200,
+            headers: None,
+            file_path: file_path.to_string_lossy().to_string(),
         }
-
-        if stream.flush().await.is_err() {
-            self.logger.error("Error flushing stream");
-            return;
-        }
+        .into_response()
+        .await
     }
 }

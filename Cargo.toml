@@ -1,6 +1,6 @@
 [package]
 name = "surfer"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "A simple web server"
 authors = ["Patrick Arndt <patrick.arndt.99@web.de>"]
@@ -8,9 +8,19 @@ authors = ["Patrick Arndt <patrick.arndt.99@web.de>"]
 [dependencies]
 async-std = { version = "1.12.0", features = ["attributes"] }
 chrono = "0.4.34"
-clap = { version = "4.5.1", features = ["cargo"] }
 futures = "0.3.30"
 proc-macro2 = "1.0"
 syn = { version = "^2.0", features = ["full", "derive"] }
 quote = "1.0"
 regex = "1.10.3"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+
+
+[lib]
+name = "surfer"
+path = "src/lib.rs"
+
+[[bin]]
+name = "test_main"
+path = "bin/main_example.rs"
