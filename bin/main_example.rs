@@ -8,14 +8,13 @@ use surfer::response::{IntoResponse, Response};
 use surfer::route;
 use surfer::server::Server;
 use surfer_macros::surfer_launch;
-
 async fn index(_: Request) -> Response {
     let json_obj = json!({
         "message": "Hello, Surfer!"
     });
     JsonResponse {
         status_code: 200,
-        headers: Default::default(),
+        headers: None,
         body: json_obj,
     }
     .into_response()
