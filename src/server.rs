@@ -22,9 +22,7 @@ pub struct Server {
     logger: Logger,
 }
 
-type AsyncHandler = Box<
-    dyn Fn(Request) -> Pin<Box<dyn Future<Output = Response> + Send + 'static>> + Send + 'static,
->;
+pub type AsyncHandler = Box<dyn Fn(Request) -> Pin<Box<dyn Future<Output = Response>>>>;
 // Route macro for registering routes in server
 #[macro_export]
 macro_rules! route {
