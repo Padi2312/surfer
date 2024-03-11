@@ -17,6 +17,24 @@ pub trait IntoResponse {
 }
 
 impl Response {
+    pub fn new(status_code: u16) -> Response {
+        Response {
+            status_code,
+            headers: HashMap::new(),
+            body: None,
+        }
+    }
+
+    pub fn with_body(mut self, body: Vec<u8>) -> Response {
+        self.body = Some(body);
+        self
+    }
+
+    pub fn with_headers(mut self, headers: HashMap<String, String>) -> Response {
+        self.headers = headers;
+        self
+    }
+
     pub async fn send(&mut self, stream: &mut TcpStream) {
         let mut response = format!("HTTP/1.1 {}\r\n", self.status_code);
         for (key, value) in &self.headers {

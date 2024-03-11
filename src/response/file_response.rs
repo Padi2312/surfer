@@ -24,10 +24,8 @@ impl IntoResponse for FileResponse {
         let mut headers: HashMap<String, String> = self.headers.unwrap_or(HashMap::new());
         headers.insert("Content-Type".to_string(), content_type.to_string());
         headers.insert("Content-Length".to_string(), content.len().to_string());
-        Response {
-            status_code: 200,
-            headers,
-            body: Some(content),
-        }
+        Response::new(self.status_code)
+            .with_body(content)
+            .with_headers(headers)
     }
 }

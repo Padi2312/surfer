@@ -19,10 +19,8 @@ impl<T: serde::Serialize + Send> IntoResponse for JsonResponse<T> {
         let mut headers = self.headers.unwrap_or(HashMap::new());
         headers.insert("Content-Type".to_string(), "application/json".to_string());
         headers.insert("Content-Length".to_string(), body.len().to_string());
-        Response {
-            status_code: self.status_code,
-            body: Some(body),
-            headers,
-        }
+        Response::new(self.status_code)
+            .with_body(body)
+            .with_headers(headers)
     }
 }

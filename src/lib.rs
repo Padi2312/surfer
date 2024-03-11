@@ -1,3 +1,4 @@
+pub mod cookie;
 mod logs;
 pub mod request;
 pub mod response;
