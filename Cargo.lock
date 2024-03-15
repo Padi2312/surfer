@@ -788,7 +788,7 @@ dependencies = [
 
 [[package]]
 name = "surfer"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "async-std",
  "chrono",
@@ -802,6 +802,8 @@ dependencies = [
 [[package]]
 name = "surfer_macros"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d0a197393a2eb62728da30713a8dcf745ba4394779f4dd4ca8e19b66125d24a"
 dependencies = [
  "proc-macro2",
  "quote",

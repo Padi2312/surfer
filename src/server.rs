@@ -180,12 +180,10 @@ impl Server {
         dir_path: PathBuf,
         relative_path: String,
     ) -> Response {
-        print!("{:?}", relative_path);
-        let mut file_path = dir_path.clone();
-        if relative_path.ends_with("/") || relative_path.is_empty() {
+        let file_path = dir_path.clone();
+        let mut file_path = file_path.join(relative_path.trim_start_matches('/'));
+        if file_path.is_dir().await || relative_path.is_empty() || relative_path.ends_with("/") {
             file_path.push("index.html");
-        } else {
-            file_path.push(relative_path.trim_start_matches('/'));
         }
 
         FileResponse {
