@@ -1,5 +1,7 @@
 [package]
 name = "surfer_macros"
+description = "A set of macros for the surfer crate"
+license = "MIT"
 version = "0.1.0"
 edition = "2018"
 
