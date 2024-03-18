@@ -180,10 +180,31 @@ impl Server {
         dir_path: PathBuf,
         relative_path: String,
     ) -> Response {
+        // TODO: I should definitely refactor this method 
         let file_path = dir_path.clone();
         let mut file_path = file_path.join(relative_path.trim_start_matches('/'));
+        // If the requested path is a directory, try to serve an index.html file
         if file_path.is_dir().await || relative_path.is_empty() || relative_path.ends_with("/") {
             file_path.push("index.html");
+        }
+
+        // If requested path has no extension, try to serve an HTML file 
+        if file_path.extension().is_none() {
+            // HTML File check
+            let html_file_path = file_path.clone();
+            let html_file_path =
+                PathBuf::from(format!("{}.html", html_file_path.to_string_lossy()));
+            if html_file_path.exists().await {
+                file_path = html_file_path;
+            }
+        }
+
+        if !file_path.exists().await {
+            return Response {
+                status_code: 404,
+                headers: headers!(("Content-Type", "text/plain")),
+                body: Some(b"404 Not Found".to_vec()),
+            };
         }
 
         FileResponse {

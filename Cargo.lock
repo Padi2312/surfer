@@ -788,7 +788,7 @@ dependencies = [
 
 [[package]]
 name = "surfer"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "async-std",
  "chrono",

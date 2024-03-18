@@ -23,7 +23,7 @@ Clone the repository and add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-surfer = "0.3.1"
+surfer = "0.3.2"
 ```
 
 ## 📚 Example Usage
